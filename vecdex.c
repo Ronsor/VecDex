@@ -106,6 +106,9 @@ static float* vectorParseJson(const char* zJson, int jsonLen,
 
       char *next = NULL;
       float value = strtof(zJson, &next);
+      if (next == zJson) {
+        goto failed;
+      }
       if (!getDimOnly) {
         ret[i] = value;
       }
