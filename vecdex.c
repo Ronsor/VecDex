@@ -300,6 +300,36 @@ static void vectorCosimFunc(sqlite3_context *ctx,
 }
 
 /*
+ * Calculate L2 distance of two vectors.
+ */
+static void vectorDistFunc(sqlite3_context *ctx,
+                           int argc, sqlite3_value **argv) {
+  if (argc < 2) return;
+
+  const float *vecA, *vecB;
+  int dimA, dimB;
+  if ((vecA = sqlite3_value_vector(argv[0], &dimA)) == NULL) {
+    sqlite3_result_null(ctx);
+    return;
+  } else if ((vecB = sqlite3_value_vector(argv[1], &dimB)) == NULL) {
+    sqlite3_result_null(ctx);
+    return;
+  } else if (dimA != dimB) {
+    sqlite3_result_null(ctx);
+    return;
+  }
+
+  double distance = 0.0, diff = 0.0;
+  for (int i = 0; i < dimA; i++) {
+    diff = vecA[i] - vecB[i];
+    distance += diff * diff;
+  }
+
+  sqlite3_result_double(ctx, sqrt(distance));
+  return;
+}
+
+/*
  * Get dimensions of a vector.
  */
 static void vectorDimFunc(sqlite3_context *ctx,
@@ -520,6 +550,7 @@ int sqlite3_vecdex_init(sqlite3 *db, char **pzErrMsg,
     { "vector_to_json",   1, SQLITE_PURE_UTF8, NULL, vectorToJsonFunc },
     { "vector_compare",   2, SQLITE_PURE_UTF8, NULL, vectorCompareFunc },
     { "vector_cosim",     2, SQLITE_PURE_UTF8, NULL, vectorCosimFunc },
+    { "vector_dist",      2, SQLITE_PURE_UTF8, NULL, vectorDistFunc },
     { "vector_dim",       1, SQLITE_PURE_UTF8, NULL, vectorDimFunc },
     { "vector_avg",       1, SQLITE_PURE_UTF8, NULL, vectorAvgFunc },
     { "vector_norm",      1, SQLITE_PURE_UTF8, NULL, vectorNormFunc },
