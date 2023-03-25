@@ -11,8 +11,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "vecdex.h"
+
+#ifndef STATIC_VECDEX
 #include <sqlite3ext.h>
 SQLITE_EXTENSION_INIT1
+#endif
+
+
 #define SQLITE_PURE (SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC)
 #define SQLITE_PURE_UTF8 (SQLITE_PURE | SQLITE_UTF8)
 
@@ -529,12 +535,17 @@ static void vectorDivFunc(sqlite3_context *ctx,
   return;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(STATIC_VECDEX)
 __declspec(dllexport)
 #endif
 int sqlite3_vecdex_init(sqlite3 *db, char **pzErrMsg,
-                        const sqlite3_api_routines *pApi) {
+#ifndef STATIC_VECDEX
+                        const sqlite3_api_routines *pApi
+#endif
+                        ) {
+#ifndef STATIC_VECDEX
   SQLITE_EXTENSION_INIT2(pApi);
+#endif
   int rc = SQLITE_OK;
 
   static const struct {
