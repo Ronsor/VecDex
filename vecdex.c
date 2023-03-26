@@ -18,7 +18,6 @@
 SQLITE_EXTENSION_INIT1
 #endif
 
-
 #define SQLITE_PURE (SQLITE_INNOCUOUS | SQLITE_DETERMINISTIC)
 #define SQLITE_PURE_UTF8 (SQLITE_PURE | SQLITE_UTF8)
 
@@ -403,6 +402,45 @@ static void vectorNormFunc(sqlite3_context *ctx,
 }
 
 /*
+ * "Crush" vector into a single integer value.
+ *
+ * The vector is first quantized into a set of binary values,
+ * then these values are summed.
+ */
+static void vectorCrushFunc(sqlite3_context *ctx,
+                            int argc, sqlite3_value **argv) {
+  if (argc < 1) {
+    sqlite3_result_null(ctx);
+    return;
+  }
+
+  double threshold = 0.5;
+  if (argc >= 2) {
+    threshold = sqlite3_value_double(argv[1]);
+  }
+  int invert = 0;
+  if (argc >= 3) {
+    invert = !!sqlite3_value_int(argv[2]);
+  }
+
+  const float* vec;
+  int dim;
+  if ((vec = sqlite3_value_vector(argv[0], &dim)) == NULL) {
+    sqlite3_result_null(ctx);
+    return;
+  }
+
+  sqlite3_int64 crushed = 0;
+  for (int i = 0; i < dim; i++) {
+    int bit = vec[i] >= threshold ? 1 : 0;
+    crushed += invert ? !bit : bit;
+  }
+
+  sqlite3_result_int64(ctx, crushed);
+  return;
+}
+
+/*
  * Add two vectors.
  */
 static void vectorAddFunc(sqlite3_context *ctx,
@@ -568,6 +606,7 @@ int sqlite3_vecdex_init(sqlite3 *db, char **pzErrMsg,
     { "vector_dim",       1, SQLITE_PURE_UTF8, NULL, vectorDimFunc },
     { "vector_avg",       1, SQLITE_PURE_UTF8, NULL, vectorAvgFunc },
     { "vector_norm",      1, SQLITE_PURE_UTF8, NULL, vectorNormFunc },
+    { "vector_crush",    -1, SQLITE_PURE_UTF8, NULL, vectorCrushFunc },
     { "vector_add",       2, SQLITE_PURE_UTF8, NULL, vectorAddFunc },
     { "vector_sub",       2, SQLITE_PURE_UTF8, NULL, vectorSubFunc },
     { "vector_mul",       2, SQLITE_PURE_UTF8, NULL, vectorMulFunc },
